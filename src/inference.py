@@ -242,7 +242,7 @@ if __name__ == '__main__':
 
     # Build the LLaMA model with the specified configuration.
     model = LLaMA.build(
-        checkpoints_dir='llama-2-7b/',
+        checkpoints_dir='../llama-2-7b/',
         tokenizer_path='llama-2-7b/tokenizer.model',
         load_model=True,
         max_seq_len=1024,
