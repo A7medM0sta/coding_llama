@@ -68,3 +68,17 @@ do
     (cd ${TARGET_FOLDER}"/${MODEL_PATH}" && md5 -c checklist.chk)
 done
 ```
+
+2. Run the following command to install the required packages
+using kaggle APIs
+```bash
+# Authenticate with credentials
+export KAGGLE_USERNAME="username"
+export KAGGLE_KEY="token"
+
+# With Curl
+curl -L -o ~/Downloads/model.tar.gz  https://www.kaggle.com/api/v1/models/google/gemma/pyTorch/2b/1/download -u $KAGGLE_USERNAME:$KAGGLE_KEY
+
+# Download specific version (here version 1)
+wget https://www.kaggle.com/api/v1/models/google/gemma/pyTorch/2b/1/download --user=$KAGGLE_USERNAME --password=$KAGGLE_KEY --auth-no-challenge
+```
