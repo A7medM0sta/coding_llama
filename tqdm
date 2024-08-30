@@ -1,0 +1,10 @@
+Name: tqdm
+Version: 4.66.1
+Summary: Fast, Extensible Progress Meter
+Home-page: 
+Author: 
+Author-email: 
+License: MPL-2.0 AND MIT
+Location: /Users/ahmedmostafa/miniconda3/envs/torch/lib/python3.9/site-packages
+Requires: 
+Required-by: autogluon.common, autogluon.core, cmdstanpy, conda, data-gradients, datasets, fvcore, huggingface_hub, imagededup, iopath, kaggle, kagglehub, nltk, openai, optuna, pandas-profiling, prophet, pytorch-lightning, roboflow, sentence-transformers, shap, spacy, super-gradients, tensorflow-datasets, torch-snippets, torchtext, transformers, ultralytics, unstructured, ydata-profiling
