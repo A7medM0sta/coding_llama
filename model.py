@@ -292,3 +292,68 @@ class FeedForward(nn.Module):
         x = self.w2(x)
         return x
 
+class EncoderBlock(nn.Module):
+
+    def __init__(self, args: ModelArgs):
+        super().__init__()
+
+        self.n_heads = args.n_heads
+        self.dim = args.dim
+        self.head_dim = args.dim // args.n_heads
+
+        self.attention = SelfAttention(args)
+        self.feed_forward = FeedForward(args)
+
+        # Normalization BEFORE the attention block
+        self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
+        # Normalization BEFORE the feed forward block
+        self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
+
+    def forward(self, x: torch.Tensor, start_pos: int, freqs_complex: torch.Tensor):
+        # (B, Seq_Len, Dim) + (B, Seq_Len, Dim) --> (B, Seq_Len, Dim)
+        h = x + self.attention.forward(
+            self.attention_norm(x), start_pos, freqs_complex
+        )
+        # (B, Seq_Len, Dim) + (B, Seq_Len, Dim) --> (B, Seq_Len, Dim)
+        out = h + self.feed_forward.forward(self.ffn_norm(h))
+        return out
+
+
+class Transformer(nn.Module):
+
+    def __init__(self, args: ModelArgs):
+        super().__init__()
+
+        assert args.vocab_size != -1, "Vocab size must be set"
+
+        self.args = args
+        self.vocab_size = args.vocab_size
+        self.n_layers = args.n_layers
+        self.tok_embeddings = nn.Embedding(self.vocab_size, args.dim)
+
+        self.layers = nn.ModuleList()
+        for layer_id in range(args.n_layers):
+            self.layers.append(EncoderBlock(args))
+
+        self.norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.output = nn.Linear(args.dim, self.vocab_size, bias=False)
+
+        self.freqs_complex = precompute_theta_pos_frequencies(self.args.dim // self.args.n_heads, self.args.max_seq_len * 2, device=self.args.device)
+
+    def forward(self, tokens: torch.Tensor, start_pos: int):
+        # (B, Seq_Len)
+        batch_size, seq_len = tokens.shape
+        assert seq_len == 1, "Only one token at a time can be processed"
+
+        # (B, Seq_Len) -> (B, Seq_Len, Dim)
+        h = self.tok_embeddings(tokens)
+
+        # Retrieve the pairs (m, theta) corresponding to the positions [start_pos, start_pos + seq_len]
+        freqs_complex = self.freqs_complex[start_pos:start_pos + seq_len]
+
+        # Consecutively apply all the encoder layers
+        for layer in self.layers:
+            h = layer(h, start_pos, freqs_complex)
+        h = self.norm(h)
+        output = self.output(h).float()
+        return output
