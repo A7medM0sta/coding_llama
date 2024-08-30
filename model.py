@@ -79,3 +79,47 @@ class RMSNorm(nn.Module):
 
         # Element-wise multiplication with the learned weight (gamma) parameter.
         return self.weight * self._norm(x.float()).type_as(x)
+
+
+def precompute_theta_pos_frequencies(head_dim: int, seq_len: int, device: str, theta: float=10000.0):
+    """
+    Precompute the positional frequencies for the rotary positional embeddings, as described in the paper.
+
+    This function calculates positional frequencies based on the given head dimension and sequence length.
+    It is specifically designed to work with models that use rotary positional embeddings, such as Transformer-based models.
+
+    The frequencies are computed using the formula:
+        theta_i = 10000^(-2(i-1)/dim) for i = [1, 2, ..., dim/2]
+    where `dim` refers to the head dimension.
+
+    The function returns a complex tensor representing the positional frequencies.
+
+    :param head_dim: The dimension of the attention head. It must be divisible by 2.
+    :param seq_len: The length of the input sequence.
+    :param device: The device on which to compute the tensor (e.g., 'cpu' or 'cuda').
+    :param theta: The base frequency parameter used in the frequency calculation. Default is 10000.0.
+    :return: A tensor of complex values representing the precomputed positional frequencies with shape (Seq_Len, Head_Dim / 2).
+    """
+    # as written in the paragraph 3.2.2 of the paper
+    # >> In order to generalize our results in 2D to any xi ∈ Rd where **d is even**, [...]
+    assert head_dim % 2 == 0, "Dimension must be divisible by 2"
+
+    # Build the theta parameter
+    # According to the formula theta_i = 10000^(-2(i-1)/dim) for i = [1, 2, ... dim/2]
+    # Shape: (Head_Dim / 2)
+    theta_numerator = torch.arange(0, head_dim, 2).float()
+
+    # Shape: (Head_Dim / 2)
+    theta = 1.0 / (theta ** (theta_numerator / head_dim)).to(device)  # (Dim / 2)
+    # Construct the positions (the "m" parameter)
+    # Shape: (Seq_Len)
+    m = torch.arange(seq_len, device=device)
+
+    # Multiply each theta by each position using the outer product.
+    # Shape: (Seq_Len) outer_product* (Head_Dim / 2) -> (Seq_Len, Head_Dim / 2)
+    freqs = torch.outer(m, theta).float()
+
+    # We can compute complex numbers in the polar form c = R * exp(m * theta), where R = 1 as follows:
+    # (Seq_Len, Head_Dim / 2) -> (Seq_Len, Head_Dim / 2)
+    freqs_complex = torch.polar(torch.ones_like(freqs), freqs)
+    return freqs_complex
