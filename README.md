@@ -82,3 +82,58 @@ curl -L -o ~/Downloads/model.tar.gz  https://www.kaggle.com/api/v1/models/google
 # Download specific version (here version 1)
 wget https://www.kaggle.com/api/v1/models/google/gemma/pyTorch/2b/1/download --user=$KAGGLE_USERNAME --password=$KAGGLE_KEY --auth-no-challenge
 ```
+
+## outputs
+```bash
+prompts = [
+        "Simply put, the theory of relativity states that ",
+        "If Google was an Italian company founded in Milan, it would",
+
+        # Few shot prompt
+        """Translate English to French:
+        sea otter => loutre de mer
+        peppermint => menthe poivrée
+        plush girafe => girafe peluche
+        cheese =>""",
+        # Zero shot prompt
+        """Tell me if the following person is actually Doraemon disguised as a human:
+        Name: Ahmed Mustafa
+        Decision: 
+        """
+    ]
+```
+
+answers
+```bash
+Simply put, the theory of relativity states that 1) time is relative to the observer, 2) mass is relative to the observer, 3) speed is relative to the observer, and 4) energy is relative to the observer. drywall repair cost per square foot
+The Theory of Relativity is a theory that describes the relationship between space, time, and energy. It is based on the idea that the speed of light is the same for all observers. The theory was developed by Albert Einstein in 190
+--------------------------------------------------
+If Google was an Italian company founded in Milan, it would be the 4th largest company in Italy.edited by The Economist.
+If Google was a country, it would be the 4th largest economy in Europe.edited by The Economist.
+If Google was a country, it would be the 3rd largest in the world.edited by The Economist.
+If Google was a country, it would be the 2nd largest in the world.edited by The Economist.
+If Google was a
+--------------------------------------------------
+Translate English to French:
+        sea otter => loutre de mer
+        peppermint => menthe poivrée
+        plush girafe => girafe peluche
+        cheese => fromage
+        casserole => casserole
+        barbecue => barbecue
+        hot dog => frankfurter
+        hamburger => hamburger
+        banana => banane
+        pineapple => ananas
+        blueberry => myrtillier
+--------------------------------------------------
+Tell me if the following person is actually Doraemon disguised as a human:
+        Name: Ahmed Mustafa
+        Decision: 
+        1. Ahmed Mustafa is a great person, and he is a very good friend of mine.
+        2. Ahmed Mustafa is a very nice person, and he is a very good friend of mine.
+        3. Ahmed Mustafa is a very good person, and he is a very good friend of mine.
+```
+## Code and Implementation Details
+* 
+## Fine tune
