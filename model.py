@@ -264,3 +264,31 @@ class SelfAttention(nn.Module):
         # (B, H_Q, 1, Head_Dim) -> (B, 1, H_Q, Head_Dim) -> (B, 1, Dim)
         output = (output.transpose(1, 2).contiguous().view(batch_size, seq_len, -1))
         return self.wo(output)  # (B, 1, Dim) -> (B, 1, Dim)
+
+
+class FeedForward(nn.Module):
+    def __init__(self,args: ModelArgs):
+        super().__init__()
+        hidden_dim = 4 * args.dim
+        hidden_dim = int(2 * hidden_dim / 3)
+        if args.ffn_dim_multiplier is not None:
+            hidden_dim = int(args.ffn_dim_multiplier * hidden_dim)
+
+        # Round the hidden_dim to the nearest multiple of the multiple_of parameter
+        hidden_dim = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
+
+        self.w1 = nn.Linear(args.dim, hidden_dim, bias=False)
+        self.w2 = nn.Linear(hidden_dim, args.dim, bias=False)
+        self.w3 = nn.Linear(args.dim, hidden_dim, bias=False)
+
+    def forward(self, x: torch.Tensor):
+        # (B, Seq_len, Dim) --> (B, Seq_len, Hidden_Dim)
+        swish = F.silu(self.w1(x))
+        # (B, Seq_Len, Dim) --> (B, Seq_Len, Hidden_Dim)
+        x_V = self.w3(x)
+        # (B, Seq_Len, Hidden_Dim) * (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Hidden_Dim)
+        x = swish * x_V
+        # (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Dim)
+        x = self.w2(x)
+        return x
+
