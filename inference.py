@@ -210,6 +210,12 @@ class LLaMA:
 
 
 if __name__ == '__main__':
+    """
+    The main execution script for running the LLaMA model. This script sets the device (CPU or GPU), 
+    defines a list of example prompts for text completion, builds the LLaMA model, generates text completions,
+    and prints the output texts.
+    """
+
     torch.manual_seed(0)
 
     # Determine the device to run the model on (CPU or GPU).
