@@ -122,4 +122,43 @@ def precompute_theta_pos_frequencies(head_dim: int, seq_len: int, device: str, t
     # We can compute complex numbers in the polar form c = R * exp(m * theta), where R = 1 as follows:
     # (Seq_Len, Head_Dim / 2) -> (Seq_Len, Head_Dim / 2)
     freqs_complex = torch.polar(torch.ones_like(freqs), freqs)
+
     return freqs_complex
+
+
+def apply_rotary_embeddings(x: torch.Tensor, freqs_complex: torch.Tensor, device: str):
+    """
+    Apply rotary positional embeddings to the input tensor `x` by rotating the input using precomputed complex positional frequencies.
+
+    This function uses the rotary embeddings technique described in Transformer models for positional encoding.
+    The input tensor is first converted to a complex representation, then rotated using the precomputed positional frequencies (`freqs_complex`).
+    Finally, the rotated tensor is converted back to a real-valued tensor.
+
+    :param x: Input tensor of shape (B, Seq_Len, H, Head_Dim), where B is the batch size, Seq_Len is the sequence length, H is the number of heads, and Head_Dim is the head dimension.
+    :param freqs_complex: Precomputed complex tensor of positional frequencies with shape (Seq_Len, Head_Dim / 2).
+    :param device: The device on which to perform the computation (e.g., 'cpu' or 'cuda').
+    :return: The input tensor `x` after applying the rotary positional embeddings, with the same shape as the input tensor.
+    """
+    # Separate the last dimension pairs of two values, representing the real and imaginary parts of the complex number
+    # Two consecutive values will become a single complex number
+    # (B, Seq_Len, H, Head_Dim) -> (B, Seq_Len, H, Head_Dim/2)
+    x_complex = torch.view_as_complex(x.float().reshape(*x.shape[:-1], -1, 2))
+
+    # Reshape the freqs_complex tensor to match the shape of the x_complex tensor.
+    # Add the batch dimension and the head dimension
+    # (Seq_Len, Head_Dim/2) --> (1, Seq_Len, 1, Head_Dim/2)
+    freqs_complex = freqs_complex.unsqueeze(0).unsqueeze(2)
+
+    # Multiply each complex number in the x_complex tensor by the corresponding complex number in the freqs_complex tensor
+    # This results in the rotation of the complex number as shown in Figure 1 of the paper
+    # (B, Seq_Len, H, Head_Dim/2) * (1, Seq_Len, 1, Head_Dim/2) = (B, Seq_Len, H, Head_Dim/2)
+    x_rotated = x_complex * freqs_complex
+
+    # Convert the complex number back to the real number
+    # (B, Seq_Len, H, Head_Dim/2) -> (B, Seq_Len, H, Head_Dim/2, 2)
+    x_out = torch.view_as_real(x_rotated)
+
+    # (B, Seq_Len, H, Head_Dim/2, 2) -> (B, Seq_Len, H, Head_Dim)
+    x_out = x_out.reshape(*x.shape)
+
+    return x_out.type_as(x).to(device)
