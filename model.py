@@ -179,46 +179,73 @@ def repeat_kv(x: torch.Tensor, n_repL: int) -> torch.Tensor:
 
     )
 
+
 class SelfAttention(nn.Module):
+    """
+    Self-attention mechanism for the Transformer model. This block includes query, key, and value projections,
+    rotary embeddings for positional encoding, and attention score computation.
+
+    :param args: A `ModelArgs` object containing model configuration such as `dim`, `n_heads`, and `max_seq_len`.
+
+    Methods:
+    - forward(x, start_pos, freqs_complex): Applies self-attention to the input tensor `x`.
+    """
+
     def __init__(self, args: ModelArgs):
+        """
+        Initializes the SelfAttention block.
+
+        :param args: A `ModelArgs` object containing the necessary configuration for the model. This includes:
+                     - `dim`: The dimension of the input tensor.
+                     - `n_heads`: The number of attention heads.
+                     - `n_kv_heads`: The number of heads for keys and values (defaults to `n_heads` if not specified).
+                     - `max_batch_size`: The maximum batch size for caching.
+                     - `max_seq_len`: The maximum sequence length for caching.
+        """
         super().__init__()
-        # Indicates the number of heads for the Keys and Values
+        # Set the number of heads for keys and values
         self.n_kv_heads = args.n_heads if args.n_kv_heads is None else args.n_kv_heads
 
-        # Indicates the number of heads for the Queries
+        # Set the number of heads for queries
         self.n_heads_q = args.n_heads
 
-        # Indicates how many times the Keys and Values should be repeated
+        # Determine the replication factor for keys and values
         self.n_rep = self.n_heads_q // self.n_kv_heads
 
-        # Indicates the dimension of each head, that is, the part of the embedding that each head will be responsible for
+        # Set the dimension of each head
         self.head_dim = args.dim // args.n_heads
 
+        # Linear projections for queries, keys, and values
         self.wq = nn.Linear(args.dim, args.n_heads * self.head_dim, bias=False)
         self.wk = nn.Linear(args.dim, self.n_kv_heads * self.head_dim, bias=False)
         self.wv = nn.Linear(args.dim, self.n_kv_heads * self.head_dim, bias=False)
         self.wo = nn.Linear(args.n_heads * self.head_dim, args.dim, bias=False)
 
+        # Cache for keys and values
         self.cache_k = torch.zeros((args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim))
         self.cache_v = torch.zeros((args.max_batch_size, args.max_seq_len, self.n_kv_heads, self.head_dim))
 
-    def forward(
-            self,
-            x: torch.Tensor,
-            start_pos: int,
-            freqs_complex: torch.Tensor
-    ):
+    def forward(self, x: torch.Tensor, start_pos: int, freqs_complex: torch.Tensor):
+        """
+        Forward pass for the SelfAttention block.
+
+        :param x: The input tensor of shape (batch_size, seq_len, dim).
+        :param start_pos: The starting position in the sequence.
+        :param freqs_complex: The complex frequencies for rotary embeddings.
+
+        :return: The output tensor of shape (batch_size, seq_len, dim) after applying self-attention.
+        """
         batch_size, seq_len, _ = x.shape  # (B, 1, Dim)
 
+        # Project the input tensor to queries, keys, and values
         # (B, 1, Dim) -> (B, 1, H_Q * Head_Dim)
         xq = self.wq(x)
-
         # (B, 1, Dim) -> (B, 1, H_KV * Head_Dim)
         xk = self.wk(x)
-
         # (B, 1, Dim) -> (B, 1, H_KV * Head_Dim)
         xv = self.wv(x)
 
+        # Reshape projections for multi-head attention
         # (B, 1, H_Q * Head_Dim) -> (B, 1, H_Q, Head_Dim)
         xq = xq.view(batch_size, seq_len, self.n_heads_q, self.head_dim)
         # (B, 1, H_KV * Head_Dim) -> (B, 1, H_KV, Head_Dim)
@@ -226,27 +253,29 @@ class SelfAttention(nn.Module):
         # (B, 1, H_KV * Head_Dim) -> (B, 1, H_KV, Head_Dim)
         xv = xv.view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
 
+        # Apply rotary embeddings to queries and keys
         # (B, 1, H_Q, Head_Dim) --> (B, 1, H_Q, Head_Dim)
         xq = apply_rotary_embeddings(xq, freqs_complex, device=x.device)
         # (B, 1, H_KV, Head_Dim) --> (B, 1, H_KV, Head_Dim)
         xk = apply_rotary_embeddings(xk, freqs_complex, device=x.device)
 
-        # Replace the entry in the cache
+        # Update the key and value caches
         self.cache_k[:batch_size, start_pos: start_pos + seq_len] = xk
         self.cache_v[:batch_size, start_pos: start_pos + seq_len] = xv
 
+        # Retrieve cached keys and values
         # (B, Seq_Len_KV, H_KV, Head_Dim)
         keys = self.cache_k[:batch_size, : start_pos + seq_len]
         # (B, Seq_Len_KV, H_KV, Head_Dim)
         values = self.cache_v[:batch_size, : start_pos + seq_len]
 
-        # Since every group of Q shares the same K and V heads, just repeat the K and V heads for every Q in the same group.
-
+        # Repeat keys and values to match the number of query heads
         # (B, Seq_Len_KV, H_KV, Head_Dim) --> (B, Seq_Len_KV, H_Q, Head_Dim)
         keys = repeat_kv(keys, self.n_rep)
         # (B, Seq_Len_KV, H_KV, Head_Dim) --> (B, Seq_Len_KV, H_Q, Head_Dim)
         values = repeat_kv(values, self.n_rep)
 
+        # Transpose tensors for attention score computation
         # (B, 1, H_Q, Head_Dim) -> (B, H_Q, 1, Head_Dim)
         xq = xq.transpose(1, 2)
         # (B, Seq_Len_KV, H_Q, Head_Dim) -> (B, H_Q, Seq_Len_KV, Head_Dim)
@@ -254,15 +283,21 @@ class SelfAttention(nn.Module):
         # (B, Seq_Len_KV, H_Q, Head_Dim) -> (B, H_Q, Seq_Len_KV, Head_Dim)
         values = values.transpose(1, 2)
 
+        # Compute scaled dot-product attention scores
         # (B, H_Q, 1, Head_Dim) @ (B, H_Q, Head_Dim, Seq_Len_KV) -> (B, H_Q, 1, Seq_Len_KV)
         scores = torch.matmul(xq, keys.transpose(2, 3)) / math.sqrt(self.head_dim)
+        # Apply softmax to attention scores
         # (B, H_Q, 1, Seq_Len_KV) -> (B, H_Q, 1, Seq_Len_KV)
         scores = F.softmax(scores.float(), dim=-1).type_as(xq)
 
+        # Compute attention-weighted sum of values
         # (B, H_Q, 1, Seq_Len) @ (B, H_Q, Seq_Len_KV, Head_Dim) -> (B, H_Q, 1, Head_Dim)
         output = torch.matmul(scores, values)
+        # Reshape output to match the input shape
         # (B, H_Q, 1, Head_Dim) -> (B, 1, H_Q, Head_Dim) -> (B, 1, Dim)
         output = (output.transpose(1, 2).contiguous().view(batch_size, seq_len, -1))
+
+        # Apply final linear projection
         return self.wo(output)  # (B, 1, Dim) -> (B, 1, Dim)
 
 
