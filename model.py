@@ -266,60 +266,142 @@ class SelfAttention(nn.Module):
         return self.wo(output)  # (B, 1, Dim) -> (B, 1, Dim)
 
 
+
+
 class FeedForward(nn.Module):
-    def __init__(self,args: ModelArgs):
+    """
+    Feed-forward network block for the Transformer model. This block includes two linear transformations with
+    a Swish (SiLU) activation function in between, commonly used in Transformer-based models.
+
+    :param args: A `ModelArgs` object containing model configuration such as `dim`, `ffn_dim_multiplier`, and `multiple_of`.
+
+    Methods:
+    - forward(x): Applies the feed-forward network to the input tensor `x`.
+    """
+
+    def __init__(self, args: ModelArgs):
+        """
+        Initializes the FeedForward block.
+
+        :param args: A `ModelArgs` object containing the necessary configuration for the model. This includes:
+                     - `dim`: The dimension of the input tensor.
+                     - `ffn_dim_multiplier`: Multiplier for adjusting the hidden dimension of the feed-forward layers.
+                     - `multiple_of`: The multiple to which the hidden dimension is rounded.
+        """
         super().__init__()
         hidden_dim = 4 * args.dim
+        # Adjust the hidden dimension as per the Transformer model architecture
         hidden_dim = int(2 * hidden_dim / 3)
+
+        # If a multiplier is provided, scale the hidden dimension accordingly
         if args.ffn_dim_multiplier is not None:
             hidden_dim = int(args.ffn_dim_multiplier * hidden_dim)
 
-        # Round the hidden_dim to the nearest multiple of the multiple_of parameter
+        # Round the hidden dimension to the nearest multiple of the `multiple_of` parameter
         hidden_dim = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
 
+        # First linear transformation layer
         self.w1 = nn.Linear(args.dim, hidden_dim, bias=False)
+        # Second linear transformation layer (output layer)
         self.w2 = nn.Linear(hidden_dim, args.dim, bias=False)
+        # Third linear transformation layer (used for element-wise multiplication with the Swish activation)
         self.w3 = nn.Linear(args.dim, hidden_dim, bias=False)
 
     def forward(self, x: torch.Tensor):
+        """
+        Forward pass for the FeedForward block.
+
+        :param x: The input tensor of shape (batch_size, seq_len, dim).
+
+        :return: The output tensor of shape (batch_size, seq_len, dim) after applying the feed-forward network.
+        """
+        # Apply the first linear transformation followed by the Swish activation function
         # (B, Seq_len, Dim) --> (B, Seq_len, Hidden_Dim)
         swish = F.silu(self.w1(x))
+
+        # Apply the third linear transformation
         # (B, Seq_Len, Dim) --> (B, Seq_Len, Hidden_Dim)
         x_V = self.w3(x)
+
+        # Perform element-wise multiplication between the Swish-activated tensor and the third linear transformation result
         # (B, Seq_Len, Hidden_Dim) * (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Hidden_Dim)
         x = swish * x_V
+
+        # Apply the second linear transformation to get the final output
         # (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Dim)
         x = self.w2(x)
+
         return x
 
 class EncoderBlock(nn.Module):
+    """
+    Encoder block for a Transformer model. This block consists of self-attention and feed-forward layers,
+    each followed by RMS normalization. It processes input tensors and returns the output after applying attention
+    and feed-forward transformations.
+
+    :param args: A `ModelArgs` object containing model configuration such as `dim`, `n_heads`, and `norm_eps`.
+
+    Methods:
+    - forward(x, start_pos, freqs_complex): Applies self-attention and feed-forward layers to the input tensor `x`.
+    """
 
     def __init__(self, args: ModelArgs):
+        """
+        Initializes the EncoderBlock.
+
+        :param args: A `ModelArgs` object containing the necessary configuration for the model. This includes:
+                     - `dim`: The dimension of the input tensor.
+                     - `n_heads`: The number of attention heads.
+                     - `norm_eps`: The epsilon value for normalization layers.
+        """
         super().__init__()
 
         self.n_heads = args.n_heads
         self.dim = args.dim
         self.head_dim = args.dim // args.n_heads
 
+        # Self-attention layer
         self.attention = SelfAttention(args)
+        # Feed-forward layer
         self.feed_forward = FeedForward(args)
 
-        # Normalization BEFORE the attention block
+        # RMS normalization layer applied before the attention block
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
-        # Normalization BEFORE the feed forward block
+        # RMS normalization layer applied before the feed-forward block
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_complex: torch.Tensor):
+        """
+        Forward pass for the EncoderBlock.
+
+        :param x: The input tensor of shape (batch_size, seq_len, dim).
+        :param start_pos: The starting position in the sequence for computing positional encodings.
+        :param freqs_complex: The precomputed complex frequencies for rotary embeddings, used in the attention mechanism.
+
+        :return: The output tensor of the same shape as the input, after applying attention and feed-forward transformations.
+        """
+        # Apply attention normalization and self-attention, then add the residual connection
         # (B, Seq_Len, Dim) + (B, Seq_Len, Dim) --> (B, Seq_Len, Dim)
         h = x + self.attention.forward(
             self.attention_norm(x), start_pos, freqs_complex
         )
+        # Apply feed-forward normalization and feed-forward layer, then add the residual connection
         # (B, Seq_Len, Dim) + (B, Seq_Len, Dim) --> (B, Seq_Len, Dim)
         out = h + self.feed_forward.forward(self.ffn_norm(h))
         return out
 
 
+
+
 class Transformer(nn.Module):
+    """
+    A Transformer model for sequence processing. This implementation uses rotary embeddings and consists of multiple encoder layers.
+
+    :param args: A `ModelArgs` object containing model configuration such as `vocab_size`, `dim`, `n_layers`, `n_heads`, `max_seq_len`, `norm_eps`, and `device`.
+
+    Methods:
+    - forward(tokens, start_pos): Processes input tokens and returns the model's output.
+    """
 
     def __init__(self, args: ModelArgs):
         super().__init__()
@@ -338,7 +420,8 @@ class Transformer(nn.Module):
         self.norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, self.vocab_size, bias=False)
 
-        self.freqs_complex = precompute_theta_pos_frequencies(self.args.dim // self.args.n_heads, self.args.max_seq_len * 2, device=self.args.device)
+        self.freqs_complex = precompute_theta_pos_frequencies(self.args.dim // self.args.n_heads,
+                                                              self.args.max_seq_len * 2, device=self.args.device)
 
     def forward(self, tokens: torch.Tensor, start_pos: int):
         # (B, Seq_Len)
