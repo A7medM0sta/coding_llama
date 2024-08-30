@@ -163,20 +163,26 @@ def apply_rotary_embeddings(x: torch.Tensor, freqs_complex: torch.Tensor, device
 
     return x_out.type_as(x).to(device)
 
-def repeat_kv(x: torch.Tensor, n_repL: int) -> torch.Tensor:
+
+def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
+    """
+    Repeats the keys/values to match the number of query heads.
+
+    :param x: Input tensor of shape (batch_size, seq_len, n_kv_heads, head_dim).
+    :param n_rep: The number of repetitions for each key/value head.
+    :return: Output tensor of shape (batch_size, seq_len, n_kv_heads * n_rep, head_dim).
+    """
     batch_size, seq_len, n_kv_heads, head_dim = x.shape
+
+    # If no repetition is needed, return the input tensor as is
     if n_rep == 1:
         return x
+
+    # Repeat the heads and reshape the tensor
     return (
-        # (B, Seq_Len, 1, Head_Dim)
-        x[: :, None, :]
-
-        # (B, Seq_Len, N_KN_Heads, N_Repo, Head_Dim)
-        .expand(batch_size, seq_len, n_kv_heads, n_rep, head_dim)
-
-        # (B, Seq_Len, N_KV_Heads * N_Repo, Head_Dim)
-        .reshape(batch_size, seq_len, n_kv_heads, head_dim)
-
+        x.unsqueeze(2)  # (B, Seq_Len, N_KV_Heads) -> (B, Seq_Len, 1, N_KV_Heads, Head_Dim)
+        .expand(batch_size, seq_len, n_rep, n_kv_heads, head_dim)  # Expand for repetition
+        .reshape(batch_size, seq_len, n_kv_heads * n_rep, head_dim)  # Reshape to combine repeated heads
     )
 
 
