@@ -2,6 +2,8 @@
 ![LLaMA 2](assets/llama.png)
 This repository contains an implementation of the LLaMA 2 (Large Language Model Meta AI) model, a Generative Pretrained Transformer (GPT) variant. The implementation focuses on the model architecture and the inference process. The code is restructured and heavily commented to facilitate easy understanding of the key parts of the architecture.
 
+## Code and Implementation Details
+
 
 
 ## Installation for llama2 pre_trained
@@ -135,6 +137,5 @@ Tell me if the following person is actually Doraemon disguised as a human:
         - The person is actually Doraemon disgu
 --------------------------------------------------
 ```
-## Code and Implementation Details
 
 ## Fine tune
