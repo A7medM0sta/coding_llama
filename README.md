@@ -1,8 +1,10 @@
 # llama2
-![LLaMA 2](assets/llama.png)
+![LLaMA 2](assets/llama.png) source: [Umar Jamil](https://github.com/hkproj/pytorch-llama)
+
 This repository contains an implementation of the LLaMA 2 (Large Language Model Meta AI) model, a Generative Pretrained Transformer (GPT) variant. The implementation focuses on the model architecture and the inference process. The code is restructured and heavily commented to facilitate easy understanding of the key parts of the architecture.
 
-## Code and Implementation Details
+To properly format the mathematical equations in your README file, you can use LaTeX syntax, which is supported in Markdown by GitHub. Here's how you can represent the mathematical equations in your README file using GitHub-flavored Markdown with inline LaTeX formatting
+## LLaMA Architecture Breakdown
 
 
 
@@ -87,6 +89,8 @@ wget https://www.kaggle.com/api/v1/models/google/gemma/pyTorch/2b/1/download --u
 ```
 
 ### Results and evaluation without any training
+I have used llama2 7b, there is other models like 13b and 70b but i did not try them because of limitation of the resources
+i will try to mention all variants in the in a table below
 ```bash
 prompts = [
         "Simply put, the theory of relativity states that ",
