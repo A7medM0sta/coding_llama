@@ -1,4 +1,5 @@
 # llama2
+![LLaMA 2](assets/llama.png)
 This repository contains an implementation of the LLaMA 2 (Large Language Model Meta AI) model, a Generative Pretrained Transformer (GPT) variant. The implementation focuses on the model architecture and the inference process. The code is restructured and heavily commented to facilitate easy understanding of the key parts of the architecture.
 
 
@@ -69,7 +70,7 @@ do
 done
 ```
 
-2. Run the following command to install the required packages
+2.Run the following command to install the required packages
 using kaggle APIs
 ```bash
 # Authenticate with credentials
@@ -83,7 +84,7 @@ curl -L -o ~/Downloads/model.tar.gz  https://www.kaggle.com/api/v1/models/google
 wget https://www.kaggle.com/api/v1/models/google/gemma/pyTorch/2b/1/download --user=$KAGGLE_USERNAME --password=$KAGGLE_KEY --auth-no-challenge
 ```
 
-## outputs
+### Results and evaluation without any training
 ```bash
 prompts = [
         "Simply put, the theory of relativity states that ",
@@ -135,5 +136,5 @@ Tell me if the following person is actually Doraemon disguised as a human:
         3. Ahmed Mustafa is a very good person, and he is a very good friend of mine.
 ```
 ## Code and Implementation Details
-* 
+
 ## Fine tune
