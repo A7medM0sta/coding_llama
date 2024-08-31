@@ -106,9 +106,9 @@ prompts = [
     ]
 ```
 
-answers
+
 ```bash
-Simply put, the theory of relativity states that 1) time is relative to the observer, 2) mass is relative to the observer, 3) speed is relative to the observer, and 4) energy is relative to the observer. drywall repair cost per square foot
+Answers = [Simply put, the theory of relativity states that 1) time is relative to the observer, 2) mass is relative to the observer, 3) speed is relative to the observer, and 4) energy is relative to the observer. drywall repair cost per square foot
 The Theory of Relativity is a theory that describes the relationship between space, time, and energy. It is based on the idea that the speed of light is the same for all observers. The theory was developed by Albert Einstein in 1905. The theory is based on the idea that the speed of light is the same for all
 --------------------------------------------------
 If Google was an Egyptation company founded in Cairo, it would be worth $10 billion.Khaled Diab
@@ -134,7 +134,7 @@ Tell me if the following person is actually Doraemon disguised as a human:
         - The person is actually Doraemon disguised as a human.
         - The person is actually Doraemon disguised as a human.
         - The person is actually Doraemon disguised as a human.
-        - The person is actually Doraemon disgu
+        - The person is actually Doraemon disgu]
 --------------------------------------------------
 ```
 
