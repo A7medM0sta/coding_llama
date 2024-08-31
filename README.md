@@ -88,18 +88,18 @@ wget https://www.kaggle.com/api/v1/models/google/gemma/pyTorch/2b/1/download --u
 ```bash
 prompts = [
         "Simply put, the theory of relativity states that ",
-        "If Google was an Italian company founded in Milan, it would",
+        "If Google was an Egyptation company founded in Cairo, it would",
 
         # Few shot prompt
-        """Translate English to French:
-        sea otter => loutre de mer
-        peppermint => menthe poivrée
-        plush girafe => girafe peluche
+        """Translate English to Arabic:
+        sea otter => ضاعة البحر
+        peppermint => نعناع البحر 
+        plush girafe => زرافة بيلوتشي
         cheese =>""",
         # Zero shot prompt
         """Tell me if the following person is actually Doraemon disguised as a human:
         Name: Ahmed Mustafa
-        Decision: 
+        Decision:
         """
     ]
 ```
