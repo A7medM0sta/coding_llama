@@ -1,5 +1,7 @@
 # llama2
-!<img src="assets/llama.png" alt="LLaMA 2" width="600" height="600"> 
+<img src="assets/llama.png" alt="LLaMA 2" width="500" height="500">
+
+
 source: [Umar Jamil](https://github.com/hkproj/pytorch-llama)
 
 This repository contains an implementation of the LLaMA 2 (Large Language Model Meta AI) model, a Generative Pretrained Transformer (GPT) variant. The implementation focuses on the model architecture and the inference process. The code is restructured and heavily commented to facilitate easy understanding of the key parts of the architecture.
@@ -546,4 +548,7 @@ Tell me if the following person is actually Doraemon disguised as a human:
 * https://arxiv.org/pdf/2104.09864v4
 * https://github.com/bzhangGo/rmsnorm/blob/master/rmsnorm_torch.py
 * https://research.facebook.com/publications/llama-open-and-efficient-foundation-language-models/
+* https://github.com/hkproj/pytorch-llama-notes/tree/main
+* https://github.com/ChanCheeKean/DataScience/blob/main/13%20-%20NLP/C06%20-%20LLama2%20(Pytorch%20Scratch).ipynb
+* https://ai.plainenglish.io/understanding-llama2-kv-cache-grouped-query-attention-rotary-embedding-and-more-c17e5f49a6d7
 * 
