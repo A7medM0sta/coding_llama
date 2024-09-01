@@ -540,6 +540,8 @@ Tell me if the following person is actually Doraemon disguised as a human:
 ```
 
 ## 🚀 Fine-tune Llama-2 for Sentiment Analysis
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1v2AJz34_Qxjfi83gT74b8VDwzFWsuHPw?usp=sharing)
+
 
 For this hands-on tutorial on fine-tuning a Llama 2 model, I am going to deal with a sentiment analysis on financial and economic information. Sentiment analysis on financial and economic information is highly relevant for businesses for several key reasons, ranging from market insights (gain valuable insights into market trends, investor confidence, and consumer behavior) to risk management (identifying potential reputational risks) to investment decisions (gauging the sentiment of stakeholders, investors, and the general public businesses can assess the potential success of various investment opportunities).
 
@@ -581,7 +583,7 @@ Tokenizer loading:
 * Finally, the code sets the padding side to be "right", which means that the input sequences will be padded on the right side. This is crucial for correct padding direction (this is the way with Llama 2).
 
 * results:
-<img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="500" height="500">
+<img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="200" height="200">
 
 
 🎯 After Fine-Tuning:
@@ -638,11 +640,11 @@ The SFTTrainer object is initialized with the following arguments:
 
 Once the SFTTrainer object is initialized, it can be used to train the model by calling the train() method
 
-results:
+* results:
 
 
-<img src="assets/training_logs.png" alt="training logs" width="500" height="400">
-<img src="assets/after_fine_tune.png" alt="after fine tune and train" width="500" height="400">
+<img src="assets/training_logs.png" alt="training logs" width="200" height="200">
+<img src="assets/after_fine_tune.png" alt="after fine tune and train" width="200" height="200">
 
 ## references
 * https://akgeni.medium.com/llama-concepts-explained-summary-a87f0bd61964
@@ -652,4 +654,3 @@ results:
 * https://github.com/hkproj/pytorch-llama-notes/tree/main
 * https://github.com/ChanCheeKean/DataScience/blob/main/13%20-%20NLP/C06%20-%20LLama2%20(Pytorch%20Scratch).ipynb
 * https://ai.plainenglish.io/understanding-llama2-kv-cache-grouped-query-attention-rotary-embedding-and-more-c17e5f49a6d7
-* 
