@@ -583,7 +583,7 @@ Tokenizer loading:
 * Finally, the code sets the padding side to be "right", which means that the input sequences will be padded on the right side. This is crucial for correct padding direction (this is the way with Llama 2).
 
 * results:
-<img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="200" height="200">
+<img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="300" height="300">
 
 
 🎯 After Fine-Tuning:
@@ -643,7 +643,7 @@ Once the SFTTrainer object is initialized, it can be used to train the model by 
 * results:
 
 
-<img src="assets/training_logs.png" alt="training logs" width="200" height="200"> <img src="assets/after_fine_tune.png" alt="after fine tune and train" width="200" height="200">
+<img src="assets/training_logs.png" alt="training logs" width="300" height="300"> <img src="assets/after_fine_tune.png" alt="after fine tune and train" width="300" height="300">
 
 ## references
 * https://akgeni.medium.com/llama-concepts-explained-summary-a87f0bd61964
