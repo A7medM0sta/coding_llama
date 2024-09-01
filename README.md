@@ -1,5 +1,6 @@
 # llama2
-!<img src="assets/llama.png" alt="LLaMA 2" width="400" height="400"> source: [Umar Jamil](https://github.com/hkproj/pytorch-llama)
+!<img src="assets/llama.png" alt="LLaMA 2" width="600" height="600"> 
+source: [Umar Jamil](https://github.com/hkproj/pytorch-llama)
 
 This repository contains an implementation of the LLaMA 2 (Large Language Model Meta AI) model, a Generative Pretrained Transformer (GPT) variant. The implementation focuses on the model architecture and the inference process. The code is restructured and heavily commented to facilitate easy understanding of the key parts of the architecture.
 
