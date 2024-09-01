@@ -405,7 +405,7 @@ In this comprehensive journey through Llama2’s advanced techniques for Transfo
 
 
 
-## Installation for llama2 pre_trained
+## Installation for llama2,3... pre_trained
 1. From this link [llama2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/)
 you can start enter your information then choose the model want to use and just will get the link then copy
 after copying the link run "download.sh" and enter your email and the linked copied
