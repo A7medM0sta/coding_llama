@@ -580,7 +580,7 @@ Tokenizer loading:
 * Then it sets the padding token to be the end-of-sequence (EOS) token.
 * Finally, the code sets the padding side to be "right", which means that the input sequences will be padded on the right side. This is crucial for correct padding direction (this is the way with Llama 2).
 
-results:
+* results:
 <img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="500" height="500">
 
 
