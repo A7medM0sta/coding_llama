@@ -643,8 +643,7 @@ Once the SFTTrainer object is initialized, it can be used to train the model by 
 * results:
 
 
-<img src="assets/training_logs.png" alt="training logs" width="200" height="200">
-<img src="assets/after_fine_tune.png" alt="after fine tune and train" width="200" height="200">
+<img src="assets/training_logs.png" alt="training logs" width="200" height="200"> <img src="assets/after_fine_tune.png" alt="after fine tune and train" width="200" height="200">
 
 ## references
 * https://akgeni.medium.com/llama-concepts-explained-summary-a87f0bd61964
