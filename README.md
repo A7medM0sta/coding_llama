@@ -539,10 +539,104 @@ Tell me if the following person is actually Doraemon disguised as a human:
 --------------------------------------------------
 ```
 
-## Fine tune
+## 🚀 Fine-tune Llama-2 for Sentiment Analysis
+
+For this hands-on tutorial on fine-tuning a Llama 2 model, I am going to deal with a sentiment analysis on financial and economic information. Sentiment analysis on financial and economic information is highly relevant for businesses for several key reasons, ranging from market insights (gain valuable insights into market trends, investor confidence, and consumer behavior) to risk management (identifying potential reputational risks) to investment decisions (gauging the sentiment of stakeholders, investors, and the general public businesses can assess the potential success of various investment opportunities).
+
+Before the technicalities of fine-tuning a large language model like Llama 2, we have to find the correct dataset to demonstrate the potentialities of fine-tuning.
+
+Particularly within the realm of finance and economic texts, annotated datasets are notably rare, with many being exclusively reserved for proprietary purposes. To address the issue of insufficient training data, scholars from the Aalto University School
+of Business introduced in 2014 a set of approximately 5000 sentences. This collection aimed to establish human-annotated benchmarks, serving as a standard for evaluating alternative modeling techniques. The involved annotators (16 people with
+adequate background knowledge on financial markets) were instructed to assess the sentences solely from the perspective of an investor, evaluating whether the news potentially holds a positive, negative, or neutral impact on the stock price.
+
+The FinancialPhraseBank dataset is a comprehensive collection that captures the sentiments of financial news headlines from the viewpoint of a retail investor. Comprising two key columns, namely "Sentiment" and "News Headline," the dataset effectively classifies sentiments as either negative, neutral, or positive. This structured dataset serves as a valuable resource for analyzing and understanding the complex dynamics of sentiment in the domain of financial news. It has been used in various studies and research initiatives, since its inception in the work by Malo, P., Sinha, A., Korhonen, P., Wallenius, J., and Takala, P.  "Good debt or bad debt: Detecting semantic orientations in economic texts.", published in the Journal of the Association for Information Science and Technology in 2014.
+* dataset used is english [kaggle link](https://www.kaggle.com/datasets/ankurzing/sentiment-analysis-for-financial-news)
+
+* Model:
+
+	•	Base Model: LLAMA2 (7B parameters)
+	•	Fine-Tuning Method: LoRA (Low-Rank Adaptation)
 
 
+📝 Before Fine-Tuning:
+Next we need to take care of the model, which is a 7b-hf (7 billion parameters, no RLHF, in the HuggingFace compatible format), loading from Kaggle models and quantization.
 
+Model loading and quantization:
+
+* First the code loads the Llama-2 language model from the Hugging Face Hub.
+* Then the code gets the float16 data type from the torch library. This is the data type that will be used for the computations.
+* Next, it creates a BitsAndBytesConfig object with the following settings:
+    1. load_in_4bit: Load the model weights in 4-bit format.
+    2. bnb_4bit_quant_type: Use the "nf4" quantization type. 4-bit NormalFloat (NF4), is a new data type that is information theoretically optimal for normally distributed weights.
+    3. bnb_4bit_compute_dtype: Use the float16 data type for computations.
+    4. bnb_4bit_use_double_quant: Do not use double quantization (reduces the average memory footprint by quantizing also the quantization constants and saves an additional 0.4 bits per parameter.).
+* Then the code creates a AutoModelForCausalLM object from the pre-trained Llama-2 language model, using the BitsAndBytesConfig object for quantization.
+* After that, the code disables caching for the model.
+* Finally the code sets the pre-training token probability to 1.
+
+Tokenizer loading:
+
+* First, the code loads the tokenizer for the Llama-2 language model.
+* Then it sets the padding token to be the end-of-sequence (EOS) token.
+* Finally, the code sets the padding side to be "right", which means that the input sequences will be padded on the right side. This is crucial for correct padding direction (this is the way with Llama 2).
+<img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="500" height="500">
+
+
+🎯 After Fine-Tuning:
+In the next cell we set everything ready for the fine-tuning. We configures and initializes a Simple Fine-tuning Trainer (SFTTrainer) for training a large language model using the Parameter-Efficient Fine-Tuning (PEFT) method, which should save time as it operates on a reduced number of parameters compared to the model's overall size. The PEFT method focuses on refining a limited set of (additional) model parameters, while keeping the majority of the pre-trained LLM parameters fixed. This significantly reduces both computational and storage expenses. Additionally, this strategy addresses the challenge of catastrophic forgetting, which often occurs during the complete fine-tuning of LLMs.
+
+PEFTConfig:
+
+The peft_config object specifies the parameters for PEFT. The following are some of the most important parameters:
+
+* lora_alpha: The learning rate for the LoRA update matrices.
+* lora_dropout: The dropout probability for the LoRA update matrices.
+* r: The rank of the LoRA update matrices.
+* bias: The type of bias to use. The possible values are none, additive, and learned.
+* task_type: The type of task that the model is being trained for. The possible values are CAUSAL_LM and MASKED_LM.
+
+TrainingArguments:
+
+The training_arguments object specifies the parameters for training the model. The following are some of the most important parameters:
+
+* output_dir: The directory where the training logs and checkpoints will be saved.
+* num_train_epochs: The number of epochs to train the model for.
+* per_device_train_batch_size: The number of samples in each batch on each device.
+* gradient_accumulation_steps: The number of batches to accumulate gradients before updating the model parameters.
+* optim: The optimizer to use for training the model.
+* save_steps: The number of steps after which to save a checkpoint.
+* logging_steps: The number of steps after which to log the training metrics.
+* learning_rate: The learning rate for the optimizer.
+* weight_decay: The weight decay parameter for the optimizer.
+* fp16: Whether to use 16-bit floating-point precision.
+* bf16: Whether to use BFloat16 precision.
+* max_grad_norm: The maximum gradient norm.
+* max_steps: The maximum number of steps to train the model for.
+* warmup_ratio: The proportion of the training steps to use for warming up the learning rate.
+* group_by_length: Whether to group the training samples by length.
+* lr_scheduler_type: The type of learning rate scheduler to use.
+* report_to: The tools to report the training metrics to.
+* evaluation_strategy: The strategy for evaluating the model during training.
+
+SFTTrainer:
+
+The SFTTrainer is a custom trainer class from the TRL library. It is used to train large language models (also using the PEFT method).
+
+The SFTTrainer object is initialized with the following arguments:
+
+* model: The model to be trained.
+* train_dataset: The training dataset.
+* eval_dataset: The evaluation dataset.
+* peft_config: The PEFT configuration.
+* dataset_text_field: The name of the text field in the dataset.
+* tokenizer: The tokenizer to use.
+* args: The training arguments.
+* packing: Whether to pack the training samples.
+* max_seq_length: The maximum sequence length.
+
+Once the SFTTrainer object is initialized, it can be used to train the model by calling the train() method
+<img src="assets/training_logs.png" alt="training logs" width="500" height="400">
+<img src="assets/after_fine_tune.png" alt="after fine tune and train" width="500" height="400">
 
 ## references
 * https://akgeni.medium.com/llama-concepts-explained-summary-a87f0bd61964
