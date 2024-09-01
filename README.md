@@ -1,5 +1,5 @@
 # llama2
-![LLaMA 2](assets/llama.png) source: [Umar Jamil](https://github.com/hkproj/pytorch-llama)
+!<img src="assets/llama.png" alt="LLaMA 2" width="400" height="400"> source: [Umar Jamil](https://github.com/hkproj/pytorch-llama)
 
 This repository contains an implementation of the LLaMA 2 (Large Language Model Meta AI) model, a Generative Pretrained Transformer (GPT) variant. The implementation focuses on the model architecture and the inference process. The code is restructured and heavily commented to facilitate easy understanding of the key parts of the architecture.
 
@@ -107,6 +107,11 @@ class SwiGLU(tf.keras.layers.Layer):
         return x
 ```
 
+* Smoothness: SwiGLU is smoother than ReLU, which can lead to better optimization and faster convergence.
+* Non-monotonicity: SwiGLU is non-monotonic, which allows it to capture complex non-linear relationships between inputs and outputs
+![Compare](assets/swu.webp)
+
+
 3.Rotary Embeddings (RopE)
 RoPE, is a type of position embedding which encodes absolute positional information with rotation matrix and naturally incorporates explicit relative position dependency in self-attention formulation.
 Advantage of RoPE
@@ -142,6 +147,259 @@ AdamW optimizer (β1 = 0.9, β2 = 0.95) with cosine learning rate schedule. Weig
 Efficient Implementations
 Efficient implementation of the causal multi-head attention operator. Available in xformers library[5].
 Manually implemented the backward function for the transformer layers to save costly activation during backward pass.
+
+4.KV Cache
+Key-Value (KV) caching is a technique used to accelerate the inference process in machine learning models, particularly in autoregressive models like GPT and Llama. In these models, 
+generating tokens one by one is a common practice, but it can be computationally expensive because it repeats certain calculations at each step. To address this, KV caching comes into play. It involves caching the previous Keys and Values, so we don’t need to recalculate them for each new token. 
+This significantly reduces the size of matrices used in calculations, making matrix multiplications faster. The only trade-off is that KV caching requires more GPU memory (or CPU memory if a GPU isn’t used) to store these Key and Value states.
+![KV Cache](assets/KvCache.gif)
+Regarding the code, the KVCache class is responsible for handling this caching. It initializes two tensors, one for keys and one for values, both are initially filled with zeros. The update method is used to update the cache with new Key and Value information while the get method retrieves the cached Key and Value information based on the starting position and sequence length. This information can then be used for efficient attention calculations during token generation.
+```python
+class KVCache:
+    def __init__(self, max_batch_size, max_seq_len, n_kv_heads, head_dim, device):
+        self.cache_k = torch.zeros((max_batch_size, max_seq_len, n_kv_heads, head_dim)).to(device)
+        self.cache_v = torch.zeros((max_batch_size, max_seq_len, n_kv_heads, head_dim)).to(device)
+
+    def update(self, batch_size, start_pos, xk, xv):
+        self.cache_k[:batch_size, start_pos :start_pos + xk.size(1)] = xk
+        self.cache_v[:batch_size, start_pos :start_pos + xv.size(1)] = xv
+
+    def get(self, batch_size, start_pos, seq_len):
+        keys = self.cache_k[:batch_size,  :start_pos + seq_len]
+        values = self.cache_v[:batch_size, :start_pos + seq_len]
+        return keys, values
+```
+During inference, the process operates on one token at a time, maintaining a sequence length of one. This means that, for Key, Value, and Query, both the linear layer and rotary embedding exclusively target a single token at a specific position. The attention weights are precomputed and stored for Key and Value as caches, ensuring that these calculations occur only once and their results are cached. The script getmethod retrieves past attention weights for Key and Value up to the current position, extending their length beyond 1. During the scaled dot-product operation, the output size matches the query size, which generate only a single token.
+
+5.Grouped Query Attention
+Llama incorporates a technique called grouped-query attention (GQA) to address memory bandwidth challenges during the autoregressive decoding of Transformer models. The primary issue stems from the need to load decoder weights and attention keys/values at each processing step, which consumes excessive memory.
+In response, two strategies are introduced: and .
+Multi-query attention (MQA) involves utilizing multiple query heads with a single key/value head, which speeds up decoder inference. However, it has drawbacks such as quality degradation and training instability.
+Grouped-Query attention (GQA), is an evolution of MQA and strikes a balance by using an intermediate number of key-value heads (more than one but fewer than the query heads). The GQA model efficiently breaks the query into n_heads segments like the original multi-head attention, and the key and value are divided into n_kv_headsgroups, enabling multiple key-value heads to share the same query.
+By repeating key-value pairs for computational efficiency, the GQA approach optimizes performance while maintaining quality, as evidenced by the code implementation.
+![GQA](assets/GroupedQueryAttention.webp)
+The provided code is for implementing grouped query attention (GQA) within the context of an autoregressive decoder using a Transformer model. Notably, during inference, the sequence length (seq_len) is always set to 1.
+```python
+def repeat_kv(x, n_rep):
+
+    batch_size, seq_len, n_kv_heads, head_dim = x.shape
+    if n_rep == 1:
+        return x
+    else:
+        # (m, seq_len, n_kv_heads, 1, head_dim)
+        # --> (m, seq_len, n_kv_heads, n_rep, head_dim)
+        # --> (m, seq_len, n_kv_heads * n_rep, head_dim)
+        return (
+            x[:, :, :, None, :]
+            .expand(batch_size, seq_len, n_kv_heads, n_rep, head_dim)
+            .reshape(batch_size, seq_len, n_kv_heads * n_rep, head_dim)
+        )
+
+class SelfAttention(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        self.n_heads = config['n_heads']
+        self.n_kv_heads = config['n_kv_heads']
+        self.dim = config['embed_dim']
+        self.n_kv_heads = self.n_heads if self.n_kv_heads is None else self.n_kv_heads
+        self.n_heads_q = self.n_heads
+        self.n_rep = self.n_heads_q // self.n_kv_heads
+        self.head_dim = self.dim // self.n_heads
+
+        self.wq = nn.Linear(self.dim, self.n_heads * self.head_dim, bias=False)
+        self.wk = nn.Linear(self.dim, self.n_kv_heads * self.head_dim, bias=False)
+        self.wv = nn.Linear(self.dim, self.n_kv_heads * self.head_dim, bias=False)
+        self.wo = nn.Linear(self.n_heads * self.head_dim, self.dim, bias=False)
+
+        self.cache = KVCache(
+            max_batch_size=config['max_batch_size'],
+            max_seq_len=config['max_seq_len'],
+            n_kv_heads=self.n_kv_heads,
+            head_dim=self.head_dim,
+            device=config['device']
+        )
+
+    def forward(self, x, start_pos, freqs_complex):
+
+        # seq_len is always 1 during inference
+        batch_size, seq_len, _ = x.shape
+
+        # (m, seq_len, dim)
+        xq = self.wq(x)
+
+        # (m, seq_len, h_kv * head_dim)
+        xk = self.wk(x)
+        xv = self.wv(x)
+
+        # (m, seq_len, n_heads, head_dim)
+        xq = xq.view(batch_size, seq_len, self.n_heads_q, self.head_dim)
+
+        # (m, seq_len, h_kv, head_dim)
+        xk = xk.view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
+        xv = xv.view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
+
+        # (m, seq_len, num_head, head_dim)
+        xq = apply_rotary_embeddings(xq, freqs_complex, device=x.device)
+
+        # (m, seq_len, h_kv, head_dim)
+        xk = apply_rotary_embeddings(xk, freqs_complex, device=x.device)
+
+        # replace the entry in the cache
+        self.cache.update(batch_size, start_pos, xk, xv)
+
+        # (m, seq_len, h_kv, head_dim)
+        keys, values = self.cache.get(batch_size, start_pos, seq_len)
+
+        # (m, seq_len, h_kv, head_dim) --> (m, seq_len, n_heads, head_dim)
+        keys = repeat_kv(keys, self.n_rep)
+        values = repeat_kv(values, self.n_rep)
+
+        # (m, n_heads, seq_len, head_dim)
+        # seq_len is 1 for xq during inference
+        xq = xq.transpose(1, 2)
+
+        # (m, n_heads, seq_len, head_dim)
+        keys = keys.transpose(1, 2)
+        values = values.transpose(1, 2)
+
+        # (m, n_heads, seq_len_q, head_dim) @ (m, n_heads, head_dim, seq_len) -> (m, n_heads, seq_len_q, seq_len)
+        scores = torch.matmul(xq, keys.transpose(2, 3)) / math.sqrt(self.head_dim)
+
+        # (m, n_heads, seq_len_q, seq_len)
+        scores = F.softmax(scores.float(), dim=-1).type_as(xq)
+
+        # (m, n_heads, seq_len_q, seq_len) @ (m, n_heads, seq_len, head_dim) -> (m, n_heads, seq_len_q, head_dim)
+        output = torch.matmul(scores, values)
+
+        # ((m, n_heads, seq_len_q, head_dim) -> (m, seq_len_q, dim)
+        output = (output.transpose(1, 2).contiguous().view(batch_size, seq_len, -1))
+
+        # (m, seq_len_q, dim)
+        return self.wo(output)
+```
+SelfAttentionis a class that combines mechanism that we have discussed. The key components of this class are as follows:
+Linear transformations are applied to the input tensor for queries (xq), keys (xk), and values (xv). These transformations project the input data into a form suitable for processing.
+The rotary embedding is applied to the query and key tensors (but not the values) using the provided frequency complex number. This step enhances the model’s ability to consider positional information and perform attention computations.
+The key-value pairs (k and v) are cached for efficient memory usage. The cached key-value pairs are retrieved up to current position (start_pos + seq_len)
+The query, key, and value tensors are prepared for Grouped-Query attention calculation by repeating key-value pairs n_rep times, where n_rep corresponds to the number of query heads that share the same key-value pair.
+Scaled dot-product attention computation. The attention scores are computed by taking the dot product of the query and key, followed by scaling. Softmax is applied to obtain the final attention scores. During the computation, the output size matches the query size, which is also 1.
+Finally, the module applies a linear transformation (wo) to the output, and the processed output is returned.
+
+
+6.Feedforward
+In the Transformer architecture, the feedforward layer plays a crucial role, typically following the attention layer and normalization. The feedforward layer consists of three linear transformations.
+The feedforward layer is a critical component of the Transformer architecture, responsible for processing the output of the self-attention layer. The feedforward layer consists of two linear transformations with a GELU activation function in between. The feedforward layer is applied to each token in the input sequence independently.
+```python
+class FeedForward(nn.Module):
+    def __init__(self, config):
+
+        super().__init__()
+
+        hidden_dim = 4 * config['embed_dim']
+        hidden_dim = int(2 * hidden_dim / 3)
+
+        if config['ffn_dim_multiplier'] is not None:
+            hidden_dim = int(config['ffn_dim_multiplier'] * hidden_dim)
+
+        # Round the hidden_dim to the nearest multiple of the multiple_of parameter
+        hidden_dim = config['multiple_of'] * ((hidden_dim + config['multiple_of'] - 1) // config['multiple_of'])
+
+        self.w1 = nn.Linear(config['embed_dim'], hidden_dim, bias=False)
+        self.w2 = nn.Linear(config['embed_dim'], hidden_dim, bias=False)
+        self.w3 = nn.Linear(hidden_dim, config['embed_dim'], bias=False)
+
+    def forward(self, x: torch.Tensor):
+        # (m, seq_len, dim) --> (m, seq_len, hidden_dim)
+        swish = swiglu(self.w1(x))
+        # (m, seq_len, dim) --> (m, seq_len, hidden_dim)
+        x_V = self.w2(x)
+
+        # (m, seq_len, hidden_dim)
+        x = swish * x_V
+
+        # (m, seq_len, hidden_dim) --> (m, seq_len, dim)
+        return self.w3(x)
+```
+During the forward pass, the input tensor x is subjected to multi layer of linear transformations. The SwiGLU activation function, applied after first transformation, enhances the expressive power of the model. The final transformation maps the tensor back to its original dimensions. This unique combination of SwiGLU activation and multiple FeedForward layer enhances the performance of the model.
+
+7.Ultimate Transformer Model
+The final culmination of Llama2, a powerful Transformer model, brings together the array of advanced techniques we’ve discussed so far. The DecoderBlock, a fundamental building block of this model, combines the knowledge of KV caching, Grouped Query Attention, SwiGLU activation, and Rotary Embedding to create a highly efficient and effective solution.
+```python
+class DecoderBlock(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        self.n_heads = config['n_heads']
+        self.dim = config['embed_dim']
+        self.head_dim = self.dim // self.n_heads
+
+        self.attention = SelfAttention(config)
+        self.feed_forward = FeedForward(config)
+
+        # rms before attention block
+        self.attention_norm = RMSNorm(self.dim, eps=config['norm_eps'])
+
+        # rms before  feed forward block
+        self.ffn_norm = RMSNorm(self.dim, eps=config['norm_eps'])
+
+    def forward(self, x, start_pos, freqs_complex):
+
+        # (m, seq_len, dim)
+        h = x + self.attention.forward(
+            self.attention_norm(x), start_pos, freqs_complex)
+        # (m, seq_len, dim)
+        out = h + self.feed_forward.forward(self.ffn_norm(h))
+        return out
+
+class Transformer(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.vocab_size = config['vocab_size']
+        self.n_layers = config['n_layers']
+        self.tok_embeddings = nn.Embedding(self.vocab_size, config['embed_dim'])
+        self.head_dim = config['embed_dim'] // config['n_heads']
+
+        self.layers = nn.ModuleList()
+        for layer_id in range(config['n_layers']):
+            self.layers.append(DecoderBlock(config))
+
+        self.norm = RMSNorm(config['embed_dim'], eps=config['norm_eps'])
+        self.output = nn.Linear(config['embed_dim'], self.vocab_size, bias=False)
+
+        self.freqs_complex = precompute_theta_pos_frequencies(
+            self.head_dim, config['max_seq_len'] * 2, device=(config['device']))
+
+    def forward(self, tokens, start_pos):
+        # (m, seq_len)
+        batch_size, seq_len = tokens.shape
+
+        # (m, seq_len) -> (m, seq_len, embed_dim)
+        h = self.tok_embeddings(tokens)
+
+        # (seq_len, (embed_dim/n_heads)/2]
+        freqs_complex = self.freqs_complex[start_pos:start_pos + seq_len]
+
+        # Consecutively apply all the encoder layers
+        # (m, seq_len, dim)
+        for layer in self.layers:
+            h = layer(h, start_pos, freqs_complex)
+        h = self.norm(h)
+
+        # (m, seq_len, vocab_size)
+        output = self.output(h).float()
+        return output
+
+model = Transformer(config).to(config['device'])
+res = model.forward(test_set['input_ids'].to(config['device']), 0)
+print(res.size())
+```
+The Transformer model encompasses a stack of DecoderBlocks to create a robust and efficient deep learning architecture. The accompanying code showcases how the DecoderBlock, with its SelfAttention, FeedForward, and RMSNorm layers, effectively processes data. The code also highlights the larger Transformer architecture’s structure, including token embeddings, layer stacking, and output generation. Furthermore, the use of precomputed frequencies and advanced techniques, combined with customized configurations, ensures the model’s remarkable performance and versatility in various natural language understanding tasks.
+Conclusion
+In this comprehensive journey through Llama2’s advanced techniques for Transformers, we’ve delved into both the theory and the intricate code implementation. However, it’s important to note that the code we’ve discussed is not primarily for training or production use but serves more as a demonstration and showcase of Llama’s remarkable inference ability. It highlights how these advanced techniques can be applied in a real-world context and showcases the potential of Llama2 in enhancing various natural language understanding tasks.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1CY-uu9XgtmhktIDYLezhFSBc1u85BlgV?usp=sharing)
+
+
 
 ## Installation for llama2 pre_trained
 1. From this link [llama2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/)
