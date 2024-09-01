@@ -5,8 +5,143 @@ This repository contains an implementation of the LLaMA 2 (Large Language Model 
 
 To properly format the mathematical equations in your README file, you can use LaTeX syntax, which is supported in Markdown by GitHub. Here's how you can represent the mathematical equations in your README file using GitHub-flavored Markdown with inline LaTeX formatting
 ## LLaMA Architecture Breakdown
+1. Pre-normalization Using RMSNorm
+RMSNorm : Root Mean Square Layer Normalization
+LLaMA normalizes the input of each transformer sub-layer, instead of normalizing the output.
+Inspiration of including pre-normalization is taken from GPT3.
+RMSNorm is extension of Layer Normalization (LayerNorm). Reason behind using RMSNorm is the computational overhead in LayerNorm. This makes improvements slow and expensive. RMSNorm achieves comparable performance against LayerNorm but reduces the running time by 7%∼64%.
+Let first understand LayerNorm, It has two properties.
+a. re-centring : It make model insensitive to shift noises on both inputs and weights.
+b. re-scaling: It keeps the output representations intact when both inputs and weights are randomly scaled.
+RMSNorm claims that most of the benefits comes from re-scaling.
+RMSNorm does re-scaling invariance and regularizes the summed
+inputs simply according to the root mean square (RMS) statistic.
+![RMSnorm](assets/RMSNorm.webp)
+a_i : activation of ith neuron
+g ∈ Rn is the gain parameter used to re-scale the standardized summed inputs
+Intuitively, RMSNorm simplifies LayerNorm by totally removing the mean statistic in LayerNorm.
+Feel free to take a look into the implementation of RMSNorm :
+implementation of RMSNorm
+```python
+# coding=utf-8
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
+import torch
+import torch.nn as nn
+
+
+class RMSNorm(nn.Module):
+    def __init__(self, d, p=-1., eps=1e-8, bias=False):
+        """
+            Root Mean Square Layer Normalization
+        :param d: model size
+        :param p: partial RMSNorm, valid value [0, 1], default -1.0 (disabled)
+        :param eps:  epsilon value, default 1e-8
+        :param bias: whether use bias term for RMSNorm, disabled by
+            default because RMSNorm doesn't enforce re-centering invariance.
+        """
+        super(RMSNorm, self).__init__()
+
+        self.eps = eps
+        self.d = d
+        self.p = p
+        self.bias = bias
+
+        self.scale = nn.Parameter(torch.ones(d))
+        self.register_parameter("scale", self.scale)
+
+        if self.bias:
+            self.offset = nn.Parameter(torch.zeros(d))
+            self.register_parameter("offset", self.offset)
+
+    def forward(self, x):
+        if self.p < 0. or self.p > 1.:
+            norm_x = x.norm(2, dim=-1, keepdim=True)
+            d_x = self.d
+        else:
+            partial_size = int(self.d * self.p)
+            partial_x, _ = torch.split(x, [partial_size, self.d - partial_size], dim=-1)
+
+            norm_x = partial_x.norm(2, dim=-1, keepdim=True)
+            d_x = partial_size
+
+        rms_x = norm_x * d_x ** (-1. / 2)
+        x_normed = x / (rms_x + self.eps)
+
+        if self.bias:
+            return self.scale * x_normed + self.offset
+
+        return self.scale * x_normed
+```
+
+2.SwiGLU Activation Function
+To understand SwiGLU activation function we need to understand Swish activation function.
+Inspiration of using SwiGLU in LLaMA is taken from PaLM.
+
+```python
+def sigmoid(x):
+  return  1/(1 + np.exp(-x))
+
+def swish(x):
+  return x*sigmoid(x)
+```
+![Swish](assets/swich.webp)
+
+Python Implementation of SwiGLU.
+```python
+class SwiGLU(tf.keras.layers.Layer):
+    def __init__(self, bias=True, dim=-1, **kwargs):
+        super(SwiGLU, self).__init__(**kwargs)
+        self.bias = bias
+        self.dim = dim
+        self.dense = tf.keras.layers.Dense(2, use_bias=bias)
+
+    def call(self, x):
+        out, gate = tf.split(x, num_split=2, axis=self.dim)
+        gate = tf.keras.activations.swish(gate)
+        x = tf.multiply(out, gate)
+        return x
+```
+
+3.Rotary Embeddings (RopE)
+RoPE, is a type of position embedding which encodes absolute positional information with rotation matrix and naturally incorporates explicit relative position dependency in self-attention formulation.
+Advantage of RoPE
+Can be expanded to any sequence lengths
+Decaying inter-token dependency with increasing relative distances.
+Capability of equipping the linear self-attention with relative position encoding.
+The key idea is to encode relative position by multiplying the context
+representations with a rotation matrix.
+RoPE decays with the relative distance increased, which is desired for natural language encoding.
+![RoPE](assets/RoPE.webp)
+```python
+   
+class RotaryEmbedding(nn.Module):
+    def __init__(self, d_model, max_len=512):
+        super(RotaryEmbedding, self).__init__()
+        self.d_model = d_model
+        self.max_len = max_len
+        self.freqs = 1 / 10000 ** (torch.arange(0, d_model, 2).float() / d_model)
+        self.register_buffer("freqs", self.freqs)
+
+    def forward(self, x):
+        seq_len = x.size(1)
+        pos = torch.arange(seq_len, device=x.device).float()
+        freqs = self.freqs.view(1, -1, 1)
+        pos = pos.view(-1, 1, 1)
+        pos_embedding = torch.cat([torch.sin(pos * freqs), torch.cos(pos * freqs)], dim=-1)
+        return pos_embedding
+```
+Inspiration of using RoPE in LLaMA is taken from GPTNeo.
+Other important approaches used in paper are
+Optimizer
+AdamW optimizer (β1 = 0.9, β2 = 0.95) with cosine learning rate schedule. Weight decay of 0.1 and gradient clipping of 1.0 with 2000 warmup steps.
+Efficient Implementations
+Efficient implementation of the causal multi-head attention operator. Available in xformers library[5].
+Manually implemented the backward function for the transformer layers to save costly activation during backward pass.
 
 ## Installation for llama2 pre_trained
 1. From this link [llama2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/)
@@ -143,3 +278,13 @@ Tell me if the following person is actually Doraemon disguised as a human:
 ```
 
 ## Fine tune
+
+
+
+
+## references
+* https://akgeni.medium.com/llama-concepts-explained-summary-a87f0bd61964
+* https://arxiv.org/pdf/2104.09864v4
+* https://github.com/bzhangGo/rmsnorm/blob/master/rmsnorm_torch.py
+* https://research.facebook.com/publications/llama-open-and-efficient-foundation-language-models/
+* 
