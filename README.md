@@ -579,7 +579,9 @@ Tokenizer loading:
 * First, the code loads the tokenizer for the Llama-2 language model.
 * Then it sets the padding token to be the end-of-sequence (EOS) token.
 * Finally, the code sets the padding side to be "right", which means that the input sequences will be padded on the right side. This is crucial for correct padding direction (this is the way with Llama 2).
-<img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="500" height="500">
+
+results:
+* <img src="assets/llama2_without_fine_tune.png" alt="without train and fine tune" width="500" height="500">
 
 
 🎯 After Fine-Tuning:
@@ -635,6 +637,8 @@ The SFTTrainer object is initialized with the following arguments:
 * max_seq_length: The maximum sequence length.
 
 Once the SFTTrainer object is initialized, it can be used to train the model by calling the train() method
+
+results:
 <img src="assets/training_logs.png" alt="training logs" width="500" height="400">
 <img src="assets/after_fine_tune.png" alt="after fine tune and train" width="500" height="400">
 
