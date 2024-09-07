@@ -4,25 +4,25 @@
 
 ---------------------------------------
 ## Overview 
-### Explaining Everything from Scratch
+#### Explaining Everything from Scratch
 
 •	Introduction: Outline the fundamental concepts and theories that underpin the project.
 •	Model Architecture: Describe the model architecture, including its components and how they interact.
 
-### Using the Weights to Give Results
+#### Using the Weights to Give Results
 
 •	Pre-trained Weights: Discuss the significance of using pre-trained model weights and how they contribute to the initial results.
 •	Initial Results: Present the results obtained using these weights and any insights gained from them.
 
 
-### Fine-Tuning for Sentiment Analysis
+#### Fine-Tuning for Sentiment Analysis
 
 •	Fine-Tuning Process: Describe the steps involved in fine-tuning the model for sentiment analysis, including data preparation, training, and evaluation.
 •	Results with Fine-Tuning: Compare the performance of the fine-tuned model with the base model.
 •	Results without Fine-Tuning: Present results using the base model without fine-tuning for sentiment analysis.
 
 
-### Waiting for More Insights
+#### Waiting for More Insights
 
 •	Future Work: Highlight potential improvements, additional experiments, or future directions for the project.
 
