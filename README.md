@@ -2,7 +2,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1CY-uu9XgtmhktIDYLezhFSBc1u85BlgV?usp=sharing)
 
 
-
+---------------------------------------
 ## Overview 
 Explaining Everything from Scratch
 
@@ -25,6 +25,9 @@ Fine-Tuning for Sentiment Analysis
 Waiting for More Insights
 
 •	Future Work: Highlight potential improvements, additional experiments, or future directions for the project.
+---------------------------------------
+---------------------------------------
+
 
 
 <img src="assets/llama.png" alt="LLaMA 2" width="500" height="500">
