@@ -21,9 +21,10 @@
 
 •	Fine-Tuning Process: Describe the steps involved in fine-tuning the model for sentiment analysis, including data preparation, training, and evaluation.
 
+•	Results without Fine-Tuning: Present results using the base model without fine-tuning for sentiment analysis.
+
 •	Results with Fine-Tuning: Compare the performance of the fine-tuned model with the base model.
 
-•	Results without Fine-Tuning: Present results using the base model without fine-tuning for sentiment analysis.
 
 
 #### Waiting for More Insights
