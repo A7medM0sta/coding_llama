@@ -25,7 +25,10 @@
 
 •	Results with Fine-Tuning: Compare the performance of the fine-tuned model with the base model.
 
-
+#### Fine-Tune for Sentiment Analysis
+•	Datasets used: https://huggingface.co/datasets/mlabonne/mini-platypus
+•	use many methods like Supervised Fine-TuningSFT), Models are trained on a dataset of instructions and responses. 
+•	Achieve a loss less then 1.63 for training and evalution parts 
 
 #### Waiting for More Insights
 
@@ -679,6 +682,36 @@ Once the SFTTrainer object is initialized, it can be used to train the model by 
 
 
 <img src="assets/training_logs.png" alt="training logs" width="300" height="300"> <img src="assets/after_fine_tune.png" alt="after fine tune and train" width="300" height="300">
+
+
+
+
+## Fine tune For Text generation
+
+# Fine-tune Llama 2 in Google Colab
+
+❤️ Created by [@maximelabonne](https://twitter.com/maximelabonne) as part of the 🗣️ [Large Language Model Course](https://github.com/mlabonne/llm-course).
+
+You can run this notebook on a free-tier Google Colab (T4 GPU).
+
+## 1. Introduction
+
+Base models like Llama 2 can **predict the next token** in a sequence. However, this does not make them particularly useful assistants since they don't reply to instructions. This is why we employ instruction tuning to align their answers with what humans expect. There are two main fine-tuning techniques:
+
+* **Supervised Fine-Tuning** (SFT): Models are trained on a dataset of instructions and responses. It adjusts the weights in the LLM to minimize the difference between the generated answers and ground-truth responses, acting as labels.
+
+* **Reinforcement Learning from Human Feedback** (RLHF): Models learn by interacting with their environment and receiving feedback. They are trained to maximize a reward signal (using [PPO](https://arxiv.org/abs/1707.06347)), which is often derived from human evaluations of model outputs.
+
+In general, RLHF is shown to capture **more complex and nuanced** human preferences, but is also more challenging to implement effectively. Indeed, it requires careful design of the reward system and can be sensitive to the quality and consistency of human feedback. A possible alternative in the future is the [Direct Preference Optimization](https://arxiv.org/abs/2305.18290) (DPO) algorithm, which directly runs preference learning on the SFT model.
+
+In our case, we will perform SFT, but this raises a question: why does fine-tuning work in the first place? As highlighted in the [Orca paper](https://mlabonne.github.io/blog/notes/Large%20Language%20Models/orca.html), our understanding is that fine-tuning **leverages knowledge learned during the pretraining** process. In other words, fine-tuning will be of little help if the model has never seen the kind of data you're interested in. However, if that's the case, SFT can be extremely performant.
+
+For example, the [LIMA paper](https://mlabonne.github.io/blog/notes/Large%20Language%20Models/lima.html) showed how you could outperform GPT-3 (DaVinci003) by fine-tuning a LLaMA (v1) model with 65 billion parameters on only 1,000 high-quality samples. The **quality of the instruction dataset is essential** to reach this level of performance, which is why a lot of work is focused on this issue (like [evol-instruct](https://arxiv.org/abs/2304.12244), Orca, or [phi-1](https://mlabonne.github.io/blog/notes/Large%20Language%20Models/phi1.html)). Note that the size of the LLM (65b, not 13b or 7b) is also fundamental to leverage pre-existing knowledge efficiently.
+
+Screenshot of the [Open LLM Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard):
+
+![](https://i.imgur.com/1OYHO0y.png)
+
 
 ## references
 * https://akgeni.medium.com/llama-concepts-explained-summary-a87f0bd61964
