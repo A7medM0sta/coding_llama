@@ -6,31 +6,30 @@
 ## Overview 
 #### Explaining Everything from Scratch
 
-•	Introduction: Outline the fundamental concepts and theories that underpin the project.
+•	**Introduction**: Outline the fundamental concepts and theories that underpin the project.
 
-•	Model Architecture: Describe the model architecture, including its components and how they interact.
+•	**Model Architecture**: Describe the model architecture, including its components and how they interact.
 
 #### Using the Weights to Give Results
 
-•	Pre-trained Weights: Discuss the significance of using pre-trained model weights and how they contribute to the initial results.
+•	**Pre-trained Weights**: Discuss the significance of using pre-trained model weights and how they contribute to the initial results.
 
-•	Initial Results: Present the results obtained using these weights and any insights gained from them.
+•	**Initial Results**: Present the results obtained using these weights and any insights gained from them.
 
 
 #### Fine-Tuning for Sentiment Analysis
 
-•	Fine-Tuning Process: Describe the steps involved in fine-tuning the model for sentiment analysis, including data preparation, training, and evaluation.
+•	**Fine-Tuning Process**: Describe the steps involved in fine-tuning the model for sentiment analysis, including data preparation, training, and evaluation.
 
-•	Results without Fine-Tuning: Present results using the base model without fine-tuning for sentiment analysis.
+•	**Results without Fine-Tuning**: Present results using the base model without fine-tuning for sentiment analysis.
 
-•	Results with Fine-Tuning: Compare the performance of the fine-tuned model with the base model.
 
-#### Fine-Tune for Sentiment Analysis
-•	Datasets used: https://huggingface.co/datasets/mlabonne/mini-platypus
+#### Fine-Tune for Text Generation 
+•	**Datasets** : https://huggingface.co/datasets/mlabonne/mini-platypus
 
-•	use many methods like Supervised Fine-TuningSFT), Models are trained on a dataset of instructions and responses. 
+•	**Methods**: like Supervised Fine-TuningSFT), Models are trained on a dataset of instructions and responses. 
 
-•	Achieve a loss less then 1.63 for training and evalution parts 
+•	**Results**: Achieve a loss less then 1.63 for training and evalution parts 
 
 #### Waiting for More Insights
 
