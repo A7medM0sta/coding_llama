@@ -1,7 +1,4 @@
 # llama2
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1CY-uu9XgtmhktIDYLezhFSBc1u85BlgV?usp=sharing)
-
-
 ---------------------------------------
 ## Overview 
 #### Explaining Everything from Scratch
@@ -688,6 +685,9 @@ Once the SFTTrainer object is initialized, it can be used to train the model by 
 
 
 ## Fine tune For Text generation
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1pLEmfuIVWdUz85Y6qXPpzRyPAczkyjTT?usp=sharing)
+
 ## 1. Introduction
 
 Base models like Llama 2 can **predict the next token** in a sequence. However, this does not make them particularly useful assistants since they don't reply to instructions. This is why we employ instruction tuning to align their answers with what humans expect. There are two main fine-tuning techniques:
