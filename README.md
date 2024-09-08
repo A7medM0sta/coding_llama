@@ -721,7 +721,7 @@ In this section, we will fine-tune a Llama 2 model with 7 billion parameters on 
 To drastically reduce the VRAM usage, we must **fine-tune the model in 4-bit precision**, which is why we'll use QLoRA here.
 
 ### Results
-<imge src="assets/results.png" height=500, width=500>
+<img src="assets/results.png" alt="Results" width="500" height="500">
 
 
 ## references
