@@ -723,8 +723,11 @@ To drastically reduce the VRAM usage, we must **fine-tune the model in 4-bit pre
 ### Results
 <img src="assets/results.png" alt="Results" width="500" height="500">
 
+### Demo
+Check out the demo of the video processing results [here](https://drive.google.com/file/d/1LhkPElN78V7qfnwhbj0c8Wdfmf_a9_QQ/view?usp=sharing).
 
-## references
+
+## References
 * https://akgeni.medium.com/llama-concepts-explained-summary-a87f0bd61964
 * https://arxiv.org/pdf/2104.09864v4
 * https://github.com/bzhangGo/rmsnorm/blob/master/rmsnorm_torch.py
