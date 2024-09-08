@@ -27,7 +27,9 @@
 
 #### Fine-Tune for Sentiment Analysis
 •	Datasets used: https://huggingface.co/datasets/mlabonne/mini-platypus
+
 •	use many methods like Supervised Fine-TuningSFT), Models are trained on a dataset of instructions and responses. 
+
 •	Achieve a loss less then 1.63 for training and evalution parts 
 
 #### Waiting for More Insights
@@ -687,13 +689,6 @@ Once the SFTTrainer object is initialized, it can be used to train the model by 
 
 
 ## Fine tune For Text generation
-
-# Fine-tune Llama 2 in Google Colab
-
-❤️ Created by [@maximelabonne](https://twitter.com/maximelabonne) as part of the 🗣️ [Large Language Model Course](https://github.com/mlabonne/llm-course).
-
-You can run this notebook on a free-tier Google Colab (T4 GPU).
-
 ## 1. Introduction
 
 Base models like Llama 2 can **predict the next token** in a sequence. However, this does not make them particularly useful assistants since they don't reply to instructions. This is why we employ instruction tuning to align their answers with what humans expect. There are two main fine-tuning techniques:
@@ -711,6 +706,21 @@ For example, the [LIMA paper](https://mlabonne.github.io/blog/notes/Large%20Lang
 Screenshot of the [Open LLM Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard):
 
 ![](https://i.imgur.com/1OYHO0y.png)
+
+
+
+## Fine-tuning Llama 2 model
+
+Three options for supervised fine-tuning: full fine-tuning, [LoRA](https://arxiv.org/abs/2106.09685), and [QLoRA](https://arxiv.org/abs/2305.14314).
+
+You can fine a minimalistic implementation of LoRA with guidelines in [this notebook](https://colab.research.google.com/drive/1QG1ONI3PfxCO2Zcs8eiZmsDbWPl4SftZ).
+
+![](https://i.imgur.com/7pu5zUe.png)
+
+In this section, we will fine-tune a Llama 2 model with 7 billion parameters on a T4 GPU with high RAM using Google Colab (2.21 credits/hour). Note that a T4 only has 16 GB of VRAM, which is barely enough to **store Llama 2-7b's weights** (7b × 2 bytes = 14 GB in FP16). In addition, we need to consider the overhead due to optimizer states, gradients, and forward activations (see [this excellent article](https://huggingface.co/docs/transformers/perf_train_gpu_one#anatomy-of-models-memory) for more information).
+
+To drastically reduce the VRAM usage, we must **fine-tune the model in 4-bit precision**, which is why we'll use QLoRA here.
+
 
 
 ## references
